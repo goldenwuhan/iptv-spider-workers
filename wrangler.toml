@@ -1,0 +1,33 @@
+name = "iptv-spider-workers"
+main = "main.py"
+# Keep this at 2025-01-01 on purpose: recent compatibility dates switch Python
+# Workers to the "external SDK" model, which requires the `workers` package to
+# be vendored into python_modules/ by pywrangler (workers-py >= 1.9). Without
+# it, deploy fails with:
+#   ModuleNotFoundError: No module named 'workers'  [code: 10021]
+# At this date the runtime provides `workers` built-in, so plain
+# `npx wrangler deploy` works. See README section 5.3.
+compatibility_date = "2025-01-01"
+
+# Python Workers are now GA. If your wrangler version still requires the
+# beta flag, uncomment the next line; if it rejects an unknown flag, remove it.
+compatibility_flags = ["python_workers"]
+
+# Optional: a D1 database binding. Without it the Worker falls back to
+# in-memory storage (lost on every cold start), which is fine for demos.
+[[d1_databases]]
+binding = "DB"
+database_name = "iptv-spider"
+database_id = "63e15e19-22e0-4b0b-b2cc-be88ea44bca4"
+
+# Optional: KV namespace used to cache generated playlists (/m3u, /txt).
+# The Worker degrades gracefully if this binding is absent.
+[[kv_namespaces]]
+binding = "CACHE"
+id = "35752c89f9644468ab08b6fc45f02679"
+
+# Cron Triggers (UTC). The original app ran its jobs at 09:20 / 18:00 / 22:00
+# local time (UTC+8) -> 01:20 / 10:00 / 14:00 UTC. Each run auto-collects the
+# configured source kinds and then validates every stored channel.
+[triggers]
+crons = ["20 1 * * *", "0 10 * * *", "0 14 * * *"]

@@ -1,0 +1,25 @@
+# Python 字节码 / 虚拟环境
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+
+# wrangler 构建产物与本地状态
+dist/
+.wrangler/
+.dev.vars
+.dev.vars.*
+
+# 本地运行数据（可能含真实采集到的频道）
+iptv_data.json
+*.local.json
+
+# 敏感：登录会话 Cookie（iptv_session），实测抓包产物，绝不提交
+_cookies.txt
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
