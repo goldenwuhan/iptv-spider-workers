@@ -30,8 +30,13 @@ database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
 binding = "CACHE"
 id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
 
-# Cron Triggers (UTC). The original app ran its jobs at 09:20 / 18:00 / 22:00
-# local time (UTC+8) -> 01:20 / 10:00 / 14:00 UTC. Each run auto-collects the
-# configured source kinds and then validates every stored channel.
+# Cron Triggers (UTC). Each run auto-collects the configured source kinds and
+# then validates the stored channels. UTC+8 (北京时间) 换算：
+#   20 1 * * * -> 09:20     0 7 * * * -> 15:00
+#
+# 注意 1：Cron 变更在 Cloudflare 侧最长需要 15 分钟才全球生效。
+# 注意 2：Workers 免费版限制「每个账号」最多 5 条 cron（不是每个 Worker 5 条）。
+#   本账号下 iptv-sub-generator / tvbox-source-aggregator 各占用 1 条，
+#   因此这里只保留 2 条，再多会报 code: 10072。
 [triggers]
-crons = ["20 1 * * *", "0 10 * * *", "0 14 * * *"]
+crons = ["20 1 * * *", "0 7 * * *"]
