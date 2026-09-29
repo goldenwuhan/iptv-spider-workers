@@ -231,6 +231,65 @@ async def on_fetch(request, env=None):
     return await _handle(request, env)
 
 
+# ---------------------------------------------------------------------------
+# Cron / scheduled implementation
+# ---------------------------------------------------------------------------
+
+async def _run_scheduled(env) -> None:
+    """Auto-collect sources, then validate what we have.
+
+    Shared by every scheduled entrypoint style -- see ``on_scheduled`` below
+    for why there are three of them.
+    """
+    try:
+        store = get_store(env)
+
+        # NOTE: deliberately named ``_slog``. A local ``_log`` here would
+        # shadow the module-level console logger, so ``_log("...")`` would
+        # build a coroutine that is never awaited -- which silently swallowed
+        # every cron error in the original version.
+        async def _slog(action, message="", level="info"):
+            await store.log(action, message, level)
+
+        _log("[iptv-spider] scheduled start")
+
+        # 1) auto-collect (toggle via the 设置 page)
+        if (await store.get("auto_collect") or "1") == "1":
+            kinds = await store.get("collect_kinds") or "hotel,multicast,migu"
+            pages = int(await store.get("collect_pages") or 1)
+            max_sources = int(await store.get("collect_max") or 12)
+            total = 0
+            for kind in str(kinds).split(","):
+                kind = kind.strip()
+                if kind in KIND_LABELS:
+                    res = await collect(kind, _worker_fetcher, store,
+                                        pages=pages,
+                                        max_sources=max_sources, log=_slog)
+                    total += res.get("channels", 0)
+            await _slog("collect", f"定时采集完成，共 {total} 个频道")
+
+        # 2) validate everything we currently store
+        results = await validate_channels(store, _worker_fetcher, 5.0)
+        await _slog("validate", f"定时校验 {len(results)} 个频道")
+        _log("[iptv-spider] scheduled done")
+    except Exception:
+        # Also printed to the console so `npx wrangler tail` shows the real
+        # stack -- cron failures are otherwise invisible.
+        _log("[iptv-spider] scheduled failed:", traceback.format_exc())
+
+
+async def on_scheduled(controller=None, env=None, ctx=None):
+    """Legacy Python Workers cron entrypoint (module-level function).
+
+    Same trap as ``on_fetch``: at older ``compatibility_date`` values the
+    runtime resolves the cron handler by the name ``on_scheduled`` on the
+    module. When only ``Default.scheduled`` existed the Cron Trigger fired but
+    silently did nothing (no logs, no error), which looked exactly like "the
+    schedule is not running".
+    """
+    return await _run_scheduled(env)
+
+
 class Default(WorkerEntrypoint):
 
     async def fetch(self, request):
@@ -247,31 +306,9 @@ class Default(WorkerEntrypoint):
         return await _handle(request, env or getattr(self, "env", None))
 
     async def scheduled(self, controller, env, ctx):
-        """Cron Trigger: auto-collect sources, then validate what we have."""
-        try:
-            store = get_store(env)
+        """Modern cron entrypoint: all four parameters are required."""
+        return await _run_scheduled(env or getattr(self, "env", None))
 
-            async def _log(action, message="", level="info"):
-                await store.log(action, message, level)
-
-            # 1) auto-collect (toggle via the 设置 page)
-            if (await store.get("auto_collect") or "1") == "1":
-                kinds = await store.get("collect_kinds") or "hotel,multicast,migu"
-                pages = int(await store.get("collect_pages") or 1)
-                max_sources = int(await store.get("collect_max") or 12)
-                total = 0
-                for kind in str(kinds).split(","):
-                    kind = kind.strip()
-                    if kind in KIND_LABELS:
-                        res = await collect(kind, _worker_fetcher, store,
-                                            pages=pages,
-                                            max_sources=max_sources, log=_log)
-                        total += res.get("channels", 0)
-                await _log("collect", f"定时采集完成，共 {total} 个频道")
-
-            # 2) validate everything we currently store
-            results = await validate_channels(store, _worker_fetcher, 5.0)
-            await _log("validate", f"定时校验 {len(results)} 个频道")
-        except Exception:
-            # Logged only -- re-raising would just turn into a red cron run.
-            _log("[iptv-spider] scheduled failed:", traceback.format_exc())
+    async def on_scheduled(self, controller=None, env=None, ctx=None):
+        """Legacy method-style cron entrypoint."""
+        return await _run_scheduled(env or getattr(self, "env", None))

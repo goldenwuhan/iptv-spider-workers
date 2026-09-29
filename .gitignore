@@ -10,6 +10,9 @@ dist/
 .dev.vars
 .dev.vars.*
 
+# 本地部署配置（含真实 D1 / KV 资源 ID，不进公开仓库）
+wrangler.local.toml
+
 # 本地运行数据（可能含真实采集到的频道）
 iptv_data.json
 *.local.json

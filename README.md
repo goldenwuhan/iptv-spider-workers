@@ -344,6 +344,30 @@ crons = ["20 1 * * *", "0 10 * * *", "0 14 * * *"]
 实测：三类源各 10 个节点 / 页，单源 95~262 个频道；批量写入已改用 D1
 `batch()`，单源采集约 **20 秒**（优化前 200+ 秒）。
 
+### 定时采集的入口约定（与 on_fetch 同一个坑）
+
+`compatibility_date` 较旧时，运行时按名字找**模块级 `on_scheduled`**。
+只写 `class Default` 里的 `scheduled()` 会导致 Cron 触发了却什么都没执行
+（不报错、不记日志，看起来就是"没定时采集"）。因此 `main.py` 同时提供三种形态：
+模块级 `on_scheduled()`、`Default.on_scheduled()`、`Default.scheduled()`，
+共享 `_run_scheduled()`。
+
+本地验证（不用等下一次 cron）：
+
+```bash
+npx wrangler dev --test-scheduled
+curl "http://localhost:8787/cdn-cgi/handler/scheduled?cron=*+*+*+*+*"
+```
+
+### 关于真实资源 ID
+
+仓库里的 `wrangler.toml` 只放占位符。部署时填自己 ID 的两种方式：
+
+```bash
+npx wrangler deploy                              # 改 wrangler.toml
+npx wrangler deploy --config wrangler.local.toml # 或用这份不进 Git 的本地配置
+```
+
 ## 9. 已知限制 —— 与原版的差异
 
 - **ffprobe 测速 / 分辨率**：Workers 跑不了 ffmpeg，改为 HTTP 可用性 + 延迟判定。
