@@ -15,16 +15,20 @@ compatibility_flags = ["python_workers"]
 
 # Optional: a D1 database binding. Without it the Worker falls back to
 # in-memory storage (lost on every cold start), which is fine for demos.
+# 部署前先把下面两处 ID 换成你自己的（仓库里是占位符，已脱敏）：
+#   npx wrangler d1 create iptv-spider                -> 填 database_id
+#   npx wrangler kv namespace create iptv-spider-cache -> 填 id
+# 两者都不是必填：缺 D1 会退化成内存存储，缺 KV 则不缓存播放列表。
 [[d1_databases]]
 binding = "DB"
 database_name = "iptv-spider"
-database_id = "63e15e19-22e0-4b0b-b2cc-be88ea44bca4"
+database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
 
 # Optional: KV namespace used to cache generated playlists (/m3u, /txt).
 # The Worker degrades gracefully if this binding is absent.
 [[kv_namespaces]]
 binding = "CACHE"
-id = "35752c89f9644468ab08b6fc45f02679"
+id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
 
 # Cron Triggers (UTC). The original app ran its jobs at 09:20 / 18:00 / 22:00
 # local time (UTC+8) -> 01:20 / 10:00 / 14:00 UTC. Each run auto-collects the

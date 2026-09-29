@@ -123,10 +123,10 @@ curl -s http://127.0.0.1:8000/txt
 # 0) 登录（Python Workers 需要开启兼容标志，见 wrangler.toml 已配置）
 npx wrangler login
 
-# 1) 创建 D1 数据库（database_id 已填进 wrangler.toml）
+# 1) 创建 D1 数据库，把输出的 database_id 填进 wrangler.toml
 npx wrangler d1 create iptv-spider
 
-# 2) 创建 KV 命名空间用于缓存播放列表（id 已填进 wrangler.toml）
+# 2) 创建 KV 命名空间用于缓存播放列表，把输出的 id 填进 wrangler.toml
 npx wrangler kv namespace create iptv-spider-cache
 
 # 3) 初始化表（本地 + 远程各跑一次）
